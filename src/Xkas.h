@@ -48,6 +48,9 @@ public:
 
 	int getOffset(string labelName);
 
+	int getRTLaddr();
+	int getRTSaddr();
+
 	int getAllocAddr();
 
 	int getASMsize();
@@ -77,6 +80,9 @@ private:
 
 	int startAddr = 0;
 	int endAddr = 0;
+
+	int RTLaddr = -1;
+	int RTSaddr = -1;
 
 	string asmPath = "";
 	Rom* romData;

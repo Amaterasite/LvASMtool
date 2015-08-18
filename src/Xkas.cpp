@@ -27,6 +27,8 @@ int Xkas::allocSpace(Rom* romData,string asmPath,int sizeOffset,int limitSize) {
 	Xkas::sizeOffset = sizeOffset;
 	Xkas::limitSize = limitSize;
 
+	int freeEndAddr = romData->getRomSize() > 0x200000 ? 0x200000 : romData->getRomSize();
+
 	ASM.open(asmPath.c_str(),ios::in|ios::binary);
 	if(!ASM) {
 		xkasErr = EerrType::asmfile_not_found;
@@ -82,7 +84,7 @@ int Xkas::allocSpace(Rom* romData,string asmPath,int sizeOffset,int limitSize) {
 	}
 
 	// romの空き領域を確保 見つからない場合エラーを出して終了
-	allocAddr = romData->findFreeSpace(startAddr,romData->getRomSize()-endAddr,allocSize);
+	allocAddr = romData->findFreeSpace(startAddr,freeEndAddr-endAddr,allocSize);
 
 	if(allocAddr<0) {
 		xkasErr = EerrType::insert_failed;
@@ -148,8 +150,20 @@ int Xkas::insertASM(int insertOffset) {
 
 	unsigned char* binContents = new unsigned char[asmSize];
 	tmpbin.seekg(insertAddr);
+
+	// バッファへの書き込みのついでにRTS RTLのアドレスを拾う
 	for(int i=0;i<asmSize;i++) {
-		binContents[i] = tmpbin.get();
+		char w = tmpbin.get();
+
+		// RTS
+		if(w==0x60) {
+			RTSaddr = convPCtoSNES(insertAddr+i);
+		}
+		//RTL
+		else if(w==0x6B) {
+			RTLaddr = convPCtoSNES(insertAddr+i);
+		}
+		binContents[i] = w;
 	}
 	tmpbin.close();
 	romData->writeData(binContents,asmSize,insertAddr);
@@ -248,6 +262,16 @@ int Xkas::getAllocAddr() {
 // ASMのサイズを取得
 int Xkas::getASMsize() {
 	return asmSize;
+}
+
+// RTLとして使えるアドレスを取得
+int Xkas::getRTLaddr() {
+	return RTLaddr;
+}
+
+// RTSとして使えるアドレスを取得
+int Xkas::getRTSaddr() {
+	return RTSaddr;
 }
 
 // ラベルのoffsetを取得

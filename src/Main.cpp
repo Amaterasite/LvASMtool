@@ -14,7 +14,7 @@ using namespace std;
 
 const char* WELCOME_MESSAGE =
 		"****************************************\n"
-		"* LevelASM tool version 1.00\n"
+		"* LevelASM tool version 1.01\n"
 		"* usage:LvASMtool SMW.smc list.txt\n"
 		"****************************************\n";
 

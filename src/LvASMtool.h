@@ -64,10 +64,12 @@ private:
 		string filename;	// 挿入するasmファイルの名前(拡張子あり)
 	};
 
-	// 挿入したアドレス
+	// 挿入したアドレス 負数格納したいからSignedで定義～
 	struct addr {
+		short bank;
 		int init;
-		int main;
+		int early;
+		int later;
 	};
 
 	string romName = "";
@@ -78,6 +80,7 @@ private:
 
 	int romSize = 0;
 	int insAddr = -1;
+	int insEndAddr = 0;
 	ushort lvASMver = 0;
 
 	int infoLevel = 0;
@@ -88,15 +91,15 @@ private:
 
 	// LeveASM 実行コードのバージョンコード
 	// ツール本体のバージョンとは別
-	const ushort LEVELASM_CODE_VERSION = 0x0088;
+	const ushort LEVELASM_CODE_VERSION = 0x0101;
 
 	// LevelASM 実行コードの先頭に挿入する情報
 	// "LevelASM tool"の有無で導入済みか判定
 	const char* LEVELASM_HEADER =
 	//_______0123456789ABCDEF
 			"LevelASM tool   "	// 0x00
-			"Version:1.00    "	// 0x10
-			"Date:2015/07/05 "	// 0x20
+			"Version:1.01    "	// 0x10
+			"Date:2015/08/20 "	// 0x20
 			"Author:88-CHAN /"	// 0x30
 			" 33953YoShI     "	// 0x40
 			"                "	// 0x50
@@ -106,6 +109,7 @@ private:
 	const int BASE_ADDR = 0x080000;
 
 	void writeLongAddr(uchar* data,int offset,int addr);
+	void writeWordAddr(uchar* data,int offset,int addr);
 	listline analyzeListLine(string listLine);
 };
 

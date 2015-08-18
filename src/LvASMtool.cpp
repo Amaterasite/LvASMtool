@@ -21,6 +21,8 @@ LvASMtool::LvASMtool(string romName,string listName,int infoLevel) {
 		throw string("Lunar Magicで改造してください。\n");
 	}
 
+	// LevelASM挿入可能領域はBank0x40未満
+	insEndAddr = romSize > 0x200000 ? 0x200000 : romSize;
 
 	insAddr = romFile.findData((void*)"LevelASM tool",13,BASE_ADDR) - 0x10;
 	if(insAddr>=0) {
@@ -40,7 +42,7 @@ LvASMtool::ELvASMver LvASMtool::checkLvASMver() {
 // LevelASM MainCode挿入
 int LvASMtool::insertLevelASMcode() {
 	if(insAddr<0) {
-		insAddr = romFile.findFreeSpace(BASE_ADDR,romSize,0x1000);
+		insAddr = romFile.findFreeSpace(BASE_ADDR,insEndAddr,0x1000);
 		if(insAddr<0) throw string("LevelASMを挿入する空き領域が見つかりませんでした。");
 	}
 	return insertLevelASMcode(insAddr);
@@ -54,44 +56,58 @@ int LvASMtool::insertLevelASMcode(int insAddr) {
 			0x00,0x00,0x00,0x00
 	};
 
-	// PC:0x002442(SNES0x80A242)に挿入するコード
-	uchar levelASMmainHijack[] = {
+	// PC:0x002442(SNES:0x80A242)に挿入するコード
+	uchar levelASMearlyHijack[] = {
 			0x5C,0xFF,0xFF,0xFF,0xEA
 	};
 
-	// PC:0x02DABB(SNES0x05D8BB)に挿入するコード
+	// PC:0x0024EA(SNES:00A2EA)に挿入するコード
+	uchar levelASMlaterHijack[] = {
+			0x5C,0xFF,0xFF,0xFF,0xEA,0xEA
+	};
+
+	// PC:0x02DABB(SNES:0x05D8BB)に挿入するコード
 	uchar levelNumHijack[] = {
 			0x22,0xFF,0xFF,0xFF
 	};
 
 	// LevelASM 実行コード
 	uchar levelASMmainCode[] = {
-			0x6B,0xC2,0x30,0x4B,0x62,0x1B,0x00,0xAD,0x0B,0x01,0x0A,0x6D,0x0B,0x01,0xAA,0xBF,
-			0xFF,0xFF,0xFF,0x48,0xBF,0xFF,0xFF,0xFF,0xEB,0x48,0x7B,0x8F,0x05,0xBD,0x7E,0xE2,
-			0x30,0x68,0x6B,0x6B,0xC2,0x30,0x4B,0x62,0x16,0x00,0xAD,0x0B,0x01,0x0A,0x6D,0x0B,
-			0x01,0xAA,0xBF,0xFF,0xFF,0xFF,0x48,0xBF,0xFF,0xFF,0xFF,0xEB,0x48,0xE2,0x30,0x68,
-			0x6B,0xAD,0xD4,0x13,0xF0,0x04,0x5C,0x5B,0xA2,0x80,0x5C,0x8A,0xA2,0x80,0x8D,0x0B,
-			0x01,0x0A,0x18,0x65,0x0E,0x6B,0xC2,0x30,0x8B,0xA2,0x03,0x07,0xA0,0x05,0x09,0xA9,
-			0xEF,0x01,0x54,0x00,0x00,0xAB,0xAE,0x01,0x07,0x8E,0x03,0x09,0xE2,0x30,0x6B,0x00
+		//  __+0___+1___+2___+3___+4___+5___+6___+7___+8___+9___+A___+B___+C___+D___+E___+F
+			0x6B,0xC2,0x30,0x4B,0x62,0x1C,0x00,0xAE,0x0B,0x01,0xBF,0xFF,0x81,0x3F,0x48,0x48,	// 0x00
+			0xAD,0x0B,0x01,0x0A,0xAA,0xBF,0x00,0x84,0x3F,0x83,0x02,0x7B,0x8F,0x05,0xBD,0x7E,	// 0x10
+			0xE2,0x30,0x68,0x6B,0x6B,0xC2,0x30,0x4B,0x62,0x17,0x00,0xAE,0x0B,0x01,0xBF,0xFF,	// 0x20
+			0x81,0x3F,0x48,0x48,0xAD,0x0B,0x01,0x0A,0xAA,0xBF,0x00,0x88,0x3F,0x83,0x02,0xE2,	// 0x30
+			0x30,0x68,0x6B,0xAD,0xD4,0x13,0xF0,0x04,0x5C,0x5B,0xA2,0x80,0x5C,0x8A,0xA2,0x80,	// 0x40
+			0x68,0x85,0x1D,0x68,0x85,0x1C,0xA9,0x80,0x48,0xF4,0xEF,0xA2,0xC2,0x30,0xAE,0x0B,	// 0x50
+			0x01,0xBF,0xFF,0x81,0x3F,0x48,0x48,0xAD,0x0B,0x01,0x0A,0xAA,0xBF,0x00,0x8C,0x3F,	// 0x60
+			0x83,0x02,0xE2,0x30,0x68,0x6B,0x8D,0x0B,0x01,0x0A,0x18,0x65,0x0E,0x6B,0xC2,0x30,	// 0x70
+			0x8B,0xA2,0x03,0x07,0xA0,0x05,0x09,0xA9,0xEF,0x01,0x54,0x00,0x00,0xAB,0xAE,0x01,	// 0x80
+			0x07,0x8E,0x03,0x09,0xE2,0x30,0x6B,0x01,0x07,0x8E,0x03,0x09,0xE2,0x30,0x6B,0x00,	// 0x90
 	};
 
 	int insSNESaddr = convPCtoSNES(insAddr) | 0x800000;
 
 	writeLongAddr(levelASMinitHijack,0x01,insSNESaddr+0x0081);	// JSL InitCode
-	writeLongAddr(levelASMinitHijack,0x11,insSNESaddr+0x00D6);	// JSL CopyPal
+	writeLongAddr(levelASMinitHijack,0x11,insSNESaddr+0x00FE);	// JSL CopyPal
 
-	writeLongAddr(levelNumHijack,0x01,insSNESaddr+0x00CE);		// JSL LevelNum
+	writeLongAddr(levelNumHijack,0x01,insSNESaddr+0x00F6);		// JSL LevelNum
 
-	writeLongAddr(levelASMmainHijack,0x01,insSNESaddr+0x00A4);	// JML MainCode
+	writeLongAddr(levelASMearlyHijack,0x01,insSNESaddr+0x00A5);	// JML EarlyMainCode
+	writeLongAddr(levelASMlaterHijack,0x01,insSNESaddr+0x00D0);	// JML LaterMainCode
 
-	writeLongAddr(levelASMmainCode,0x10,insSNESaddr+0x0401);	// LDA.l InitPtr+$01,x
-	writeLongAddr(levelASMmainCode,0x15,insSNESaddr+0x0400);	// LDA.l InitPtr,x
-	writeLongAddr(levelASMmainCode,0x33,insSNESaddr+0x0A01);	// LDA.l Mainptr+$01,x
-	writeLongAddr(levelASMmainCode,0x38,insSNESaddr+0x0A00);	// LDA.l Mainptr,x
+	writeLongAddr(levelASMmainCode,0x0B,insSNESaddr+0x01FF);	// LDA.l BankData-$01,x
+	writeLongAddr(levelASMmainCode,0x2F,insSNESaddr+0x01FF);	// LDA.l BankData-$01,x
+	writeLongAddr(levelASMmainCode,0x62,insSNESaddr+0x01FF);	// LDA.l BankData-$01,x
+
+	writeLongAddr(levelASMmainCode,0x16,insSNESaddr+0x0400);	// LDA.l InitPtr,x
+	writeLongAddr(levelASMmainCode,0x3A,insSNESaddr+0x0800);	// LDA.l EarlyPtr,x
+	writeLongAddr(levelASMmainCode,0x6D,insSNESaddr+0x0C00);	// LDA.l LaterPtr,x
 
 	// 本家コード書き換え
 	romFile.writeData(levelASMinitHijack,sizeof(levelASMinitHijack),0x0025CC);
-	romFile.writeData(levelASMmainHijack,sizeof(levelASMmainHijack),0x002242);
+	romFile.writeData(levelASMearlyHijack,sizeof(levelASMearlyHijack),0x002242);
+	romFile.writeData(levelASMlaterHijack,sizeof(levelASMearlyHijack),0x0022EA);
 	romFile.writeData(levelNumHijack,sizeof(levelNumHijack),0x02D8BB);
 
 	// ヘッダ書き込み
@@ -114,14 +130,21 @@ int LvASMtool::insertLevelASMcode(int insAddr) {
 // LevelASMを挿入
 int LvASMtool::insertLevelASM() {
 	if(insAddr<0) return -1;
-	uchar InitPtrs[0x0600];
-	uchar MainPtrs[0x0600];
+	uchar InitPtrs[0x0400];
+	uchar EarlyPtrs[0x0400];
+	uchar LaterPtrs[0x0400];
+	uchar PtrBank[0x0200];
 
 	// INIT MAINをRTLで埋める
-	int RTLaddr = convPCtoSNES(insAddr+0x7F)|0x800000;
-	for(int i=0;i<0x600;i+=3) {
+	ushort RTLaddr = convPCtoSNES(insAddr+0x7F);
+	for(int i=0;i<0x400;i+=2) {
 		writeLongAddr(InitPtrs,i,RTLaddr);
-		writeLongAddr(MainPtrs,i,RTLaddr);
+		writeLongAddr(EarlyPtrs,i,RTLaddr);
+		writeLongAddr(LaterPtrs,i,RTLaddr);
+	}
+	uchar RTLbank = (convPCtoSNES(insAddr+0x7F)>>16)|0x80;
+	for(int i=0;i<0x0200;i++) {
+		PtrBank[i] = RTLbank;
 	}
 
 	// Level毎の挿入ファイル数 1st passでカウント、2nd passで使われる
@@ -153,10 +176,10 @@ int LvASMtool::insertLevelASM() {
 
 		if(lineData.insnum<0 || lineData.filename=="")	continue;
 
-		// 一つのLevelに挿入可能なasmの数は、RATSタグで保護可能な8,190個とする。
-		if(++insFileNum[lineData.insnum] > 8190) {
+		// 一つのLevelに挿入可能なasmの数は、bank1個に挿入可能数の2,729個とする。
+		if(++insFileNum[lineData.insnum] > 2729) {
 			throw string(
-					"一つのLevelに挿入するasmの数が8,190を超えました。\n"
+					"一つのLevelに挿入するasmの数が2,729を超えました。\n"
 					"　 　 　 　 こんな　つーるに　まし゛に\n"
 					"　 　 　 　 なっちゃって　と゛うするの\n"
 					"　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 　 完");
@@ -196,15 +219,31 @@ int LvASMtool::insertLevelASM() {
 			}
 			romFile.writeData((void*)"LEVELASM",8,xAddr+0x08);
 
-			addrData.init = Xkaser.getOffset("INIT");
-			if(addrData.init < 0) throw lineData.filename + ": print \"INIT \",pcが見つかりませんでした。\n";
-			addrData.main = Xkaser.getOffset("MAIN");
-			if(addrData.main < 0) throw lineData.filename + ": print \"MAIN \",pcが見つかりませんでした。\n";
-			addrData.init |= 0x800000;
-			addrData.main |= 0x800000;
+			// 各ラベル位置を取得 見つからない物はRTLのアドレスを割り当て
+
+			addrData.init = Xkaser.getOffset("INIT") & 0xFFFF;
+
+			if(Xkaser.getOffset("MAIN") < 0) {
+				addrData.early = Xkaser.getOffset("EARLY") & 0xFFFF;
+				addrData.later = Xkaser.getOffset("LATER") & 0xFFFF;
+			}
+			else {
+				addrData.early = Xkaser.getOffset("MAIN") & 0xFFFF;
+				addrData.later = -1;
+			}
+
+			if(addrData.init < 0)	addrData.init = Xkaser.getRTLaddr() & 0xFFFF;
+			if(addrData.early <0)	addrData.early = Xkaser.getRTLaddr() & 0xFFFF;
+			if(addrData.later <0)	addrData.later = Xkaser.getRTLaddr() & 0xFFFF;
+
+			// もういらないけど表示用に残しておく？
+			addrData.bank = (convPCtoSNES(xAddr)>>16)|0x80;
+
 			addrList[lineData.filename] = addrData;
 			if(infoLevel>0) {
-				printf("Addr:0x%06X Size:%dBytes \nINIT:0x%06X MAIN:0x%06X\n",convPCtoSNES(xAddr)|0x800000,xSize,addrData.init,addrData.main);
+				printf("Addr:0x%06X Size:%dBytes \n"
+						"BANK:0x%02X   INIT:0x%04X EARLY:0x%04X LATER:0x%04X\n",
+						convPCtoSNES(xAddr)|0x800000, xSize, addrData.bank, addrData.init, addrData.early, addrData.later);
 			}
 		}
 
@@ -213,8 +252,10 @@ int LvASMtool::insertLevelASM() {
 		// 対象のLevelに挿入するASMの数が一つの場合
 		if(insFileNum[lineData.insnum] == 1) {
 			// RTLでジャンプするので事前にデクリメントしておく。
-			writeLongAddr(InitPtrs,lineData.insnum*3,addrData.init-1);
-			writeLongAddr(MainPtrs,lineData.insnum*3,addrData.main-1);
+			PtrBank[lineData.insnum] = addrData.bank;
+			writeWordAddr(InitPtrs,lineData.insnum*2,addrData.init-1);
+			writeWordAddr(EarlyPtrs,lineData.insnum*2,addrData.early-1);
+			writeWordAddr(LaterPtrs,lineData.insnum*2,addrData.later-1);
 		}
 		// 対象のLevelに挿入するASMの数が複数ある場合、JSL JMLだけで構成されたコードを自動生成する。
 		/* 詳細:
@@ -224,20 +265,22 @@ int LvASMtool::insertLevelASM() {
 		 *  print "INIT ",pc
 		 *  JSL !AA_INIT
 		 *  JML !BB_INIT
-		 *  print "MAIN ",pc
-		 *  JSL !AA_MAIN
-		 *  JML !BB_MAIN
-		 * 挿入可能な数はRATSで保護可能な65536bytesからヘッダ16bytesを引き、
-		 * 1個当たりのINIT MAINで消費される8bytesで割った数である8190個です。
-		 * 8190個のLevelASMを挿入するLevel 見てみたいですネ。
+		 *  print "EARLY ",pc
+		 *  JSL !AA_EARLY
+		 *  JML !BB_EARLY
+		 *  print "LATER ",pc
+		 *  JSL !AA_LATER
+		 *  JML !BB_LATER
+		 * 挿入可能な数は32,768bytesからヘッダ16bytesを引き、
+		 * 1個当たりのINIT EARLY LATERで消費される12bytesで割った数である2,729個です。
 		 */
 		else if(insFileNum[lineData.insnum] > 1) {
 			int asmInsAddr;
 			uchar instBuf[4];
 			// 初回挿入の場合 必要な領域を確保
 			if(nowInsFileNum[lineData.insnum] == 1) {
-				int insSize = insFileNum[lineData.insnum]*8+0x10;
-				asmInsAddr = romFile.findFreeSpace(BASE_ADDR,insSize);
+				int insSize = insFileNum[lineData.insnum]*12+0x10;
+				asmInsAddr = romFile.findFreeSpace(BASE_ADDR,insEndAddr,insSize);
 				if(asmInsAddr < 0)	throw string("LevelASMを挿入するだけのrom領域が見つかりませんでした。\n");
 				if(infoLevel > 0) {
 					printf("領域確保 Addr:%06X Size:%dBytes\n",convPCtoSNES(asmInsAddr)|0x800000,insSize);
@@ -250,31 +293,43 @@ int LvASMtool::insertLevelASM() {
 				uchar NOP = 0xEA;
 				romFile.writeReptData((void*)&NOP,1,insSize-0x10,asmInsAddr+0x10);
 
-				writeLongAddr(InitPtrs,lineData.insnum*3,convPCtoSNES((asmInsAddr+0x0F))|0x800000);
-				writeLongAddr(MainPtrs,lineData.insnum*3,convPCtoSNES((asmInsAddr+0x0F+insFileNum[lineData.insnum]*4))|0x800000);
+				PtrBank[lineData.insnum] = (convPCtoSNES(asmInsAddr+0x0F)>>16)|0x80;
+				writeWordAddr(InitPtrs,lineData.insnum*2,convPCtoSNES(asmInsAddr+0x0F));
+				writeWordAddr(EarlyPtrs,lineData.insnum*2,convPCtoSNES(asmInsAddr+0x0F+insFileNum[lineData.insnum]*4));
+				writeWordAddr(LaterPtrs,lineData.insnum*2,convPCtoSNES(asmInsAddr+0x0F+insFileNum[lineData.insnum]*8));
 			}
 			else {
-				asmInsAddr = (InitPtrs[lineData.insnum*3] | InitPtrs[lineData.insnum*3+1]<<8 | InitPtrs[lineData.insnum*3+2]<<16) - 0x0F;
+				asmInsAddr = (InitPtrs[lineData.insnum*2] | InitPtrs[lineData.insnum*2+1]<<8 | PtrBank[lineData.insnum]<<16) - 0x0F;
 				asmInsAddr = convSNEStoPC(asmInsAddr&0x7FFFFF);
 			}
-			// 最後ならJMLXXYYZZ それ以外ならJSL XXYYZZ
+			// 最後ならJML XXYYZZ それ以外ならJSL XXYYZZ
 			instBuf[0] = nowInsFileNum[lineData.insnum] == insFileNum[lineData.insnum] ? 0x5C : 0x22;
 
+			// Bankは全ラベル共通
+			instBuf[3] = addrData.bank;
+
 			// INIT書き込み
-			writeLongAddr(instBuf,1,addrData.init);
+			writeWordAddr(instBuf,1,addrData.init);
 			romFile.writeData(instBuf,4,asmInsAddr+0x0C+nowInsFileNum[lineData.insnum]*4);
 
-			// MAIN書き込み
-			writeLongAddr(instBuf,1,addrData.main);
+			// EARLY書き込み
+			writeWordAddr(instBuf,1,addrData.early);
 			romFile.writeData(instBuf,4,asmInsAddr+0x0C+(insFileNum[lineData.insnum]+nowInsFileNum[lineData.insnum])*4);
+
+			// LATER書き込み
+			writeWordAddr(instBuf,1,addrData.later);
+			romFile.writeData(instBuf,4,asmInsAddr+0x0C+(insFileNum[lineData.insnum]*2+nowInsFileNum[lineData.insnum])*4);
+
 		}
 		// 何かの間違いで挿入する予定の無いLevelが対象の場合
 		else {
 			throw string("挿入予\定の無いLevel番号に挿入処理をしようとしました。\n");	//ダメ文字大好き結婚して
 		}
 	}
-	romFile.writeData(InitPtrs,0x600,insAddr+0x0400);
-	romFile.writeData(MainPtrs,0x600,insAddr+0x0A00);
+	romFile.writeData(PtrBank,	0x0200,insAddr+0x0200);
+	romFile.writeData(InitPtrs,	0x0400,insAddr+0x0400);
+	romFile.writeData(EarlyPtrs,0x0400,insAddr+0x0800);
+	romFile.writeData(LaterPtrs,0x0400,insAddr+0x0C00);
 
 	return 0;
 }
@@ -335,11 +390,13 @@ void LvASMtool::rewindHijackCode() {
 			0x68,0x85,0x1D,0x68,0x85,0x1C
 	};
 
+	// ver 0x0101以前 INIT MAIN方式
 	if(lvASMver<0x0101) {
 		romFile.writeData(rewindInitHijack,sizeof(rewindInitHijack),0x0025CC);
 		romFile.writeData(rewindMainHijack,sizeof(rewindMainHijack),0x002242);
 		romFile.writeData(rewindLevelNumHijack,sizeof(rewindLevelNumHijack),0x02D8BB);
 	}
+	// ver 0x0101以降 INIT EARLY LATER方式
 	else {
 		romFile.writeData(rewindInitHijack,sizeof(rewindInitHijack),0x0025CC);
 		romFile.writeData(rewindMainHijack,sizeof(rewindMainHijack),0x002242);
@@ -379,6 +436,12 @@ void LvASMtool::writeLongAddr(uchar* data,int offset,int addr) {
 	data[offset] = (uchar)addr;
 	data[offset+1] = (uchar)(addr>>8);
 	data[offset+2] = (uchar)(addr>>16);
+}
+
+// uchar型の配列に16bitのデータを書き込むだけ
+void LvASMtool::writeWordAddr(uchar* data,int offset,int addr) {
+	data[offset] = (uchar)addr;
+	data[offset+1] = (uchar)(addr>>8);
 }
 
 
