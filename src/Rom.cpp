@@ -239,6 +239,7 @@ int Rom::writeRomFile() {
 	if(header == EHeader::HEADER)	romFile.seekg(0x0200);
 	else							romFile.seekg(0x0000);
 	romFile.write((const char*)romData,romSize);
+	romFile.close();
 	return 1;
 }
 

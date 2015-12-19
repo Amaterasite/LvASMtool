@@ -25,15 +25,25 @@ LvASMtool::LvASMtool(string romName,string listName,int infoLevel) {
 	insEndAddr = romSize > 0x200000 ? 0x200000 : romSize;
 
 	insAddr = romFile.findData((void*)"LevelASM tool",13,BASE_ADDR) - 0x10;
+	if(romFile.checkRATSdata(insAddr) < 0)	insAddr = -1;
+
+	// インストール済みの場合バージョン情報取得
 	if(insAddr>=0) {
 		lvASMver = romFile.getRomData(insAddr+0x09)<<8 | romFile.getRomData(insAddr+0x08);
+	}
+	// edit1754氏のLevelASMが挿入済みか確認 挿入済みで 挿入アドレス = -1754
+	else {
+		insAddr = romFile.findData((void*)"@LVLASM0",8,0) - 0x08;
+		insAddr = (romFile.checkRATSdata(insAddr) >= 0) ? -1754 : -1;
 	}
 }
 
 LvASMtool::~LvASMtool() {}
 
 LvASMtool::ELvASMver LvASMtool::checkLvASMver() {
-	if(insAddr<0) return _nothing;
+	if(insAddr == -1754)	return _edit1754;
+	else if(insAddr<0)		return _nothing;
+
 	if(lvASMver==LEVELASM_CODE_VERSION)		return _now;
 	else if(lvASMver<LEVELASM_CODE_VERSION)	return _old;
 	else									return _new;
@@ -138,9 +148,9 @@ int LvASMtool::insertLevelASM() {
 	// INIT MAINをRTLで埋める
 	ushort RTLaddr = convPCtoSNES(insAddr+0x7F);
 	for(int i=0;i<0x400;i+=2) {
-		writeLongAddr(InitPtrs,i,RTLaddr);
-		writeLongAddr(EarlyPtrs,i,RTLaddr);
-		writeLongAddr(LaterPtrs,i,RTLaddr);
+		writeWordAddr(InitPtrs,i,RTLaddr);
+		writeWordAddr(EarlyPtrs,i,RTLaddr);
+		writeWordAddr(LaterPtrs,i,RTLaddr);
 	}
 	uchar RTLbank = (convPCtoSNES(insAddr+0x7F)>>16)|0x80;
 	for(int i=0;i<0x0200;i++) {
@@ -221,20 +231,28 @@ int LvASMtool::insertLevelASM() {
 
 			// 各ラベル位置を取得 見つからない物はRTLのアドレスを割り当て
 
-			addrData.init = Xkaser.getOffset("INIT") & 0xFFFF;
+			if(Xkaser.getRTLaddr() < 0) {
+				throw string("コードにはRTLが必要です。\n");
+			}
+
+			addrData.init = Xkaser.getOffset("INIT");
 
 			if(Xkaser.getOffset("MAIN") < 0) {
-				addrData.early = Xkaser.getOffset("EARLY") & 0xFFFF;
-				addrData.later = Xkaser.getOffset("LATER") & 0xFFFF;
+				addrData.early = Xkaser.getOffset("EARLY");
+				addrData.later = Xkaser.getOffset("LATER");
 			}
 			else {
-				addrData.early = Xkaser.getOffset("MAIN") & 0xFFFF;
+				addrData.early = Xkaser.getOffset("MAIN");
 				addrData.later = -1;
 			}
 
-			if(addrData.init < 0)	addrData.init = Xkaser.getRTLaddr() & 0xFFFF;
-			if(addrData.early <0)	addrData.early = Xkaser.getRTLaddr() & 0xFFFF;
-			if(addrData.later <0)	addrData.later = Xkaser.getRTLaddr() & 0xFFFF;
+			if(addrData.init < 0)	addrData.init = Xkaser.getRTLaddr();
+			if(addrData.early <0)	addrData.early = Xkaser.getRTLaddr();
+			if(addrData.later <0)	addrData.later = Xkaser.getRTLaddr();
+
+			addrData.init &= 0xFFFF;
+			addrData.early &= 0xFFFF;
+			addrData.later &= 0xFFFF;
 
 			// もういらないけど表示用に残しておく？
 			addrData.bank = (convPCtoSNES(xAddr)>>16)|0x80;
@@ -400,11 +418,56 @@ void LvASMtool::rewindHijackCode() {
 	else {
 		romFile.writeData(rewindInitHijack,sizeof(rewindInitHijack),0x0025CC);
 		romFile.writeData(rewindMainHijack,sizeof(rewindMainHijack),0x002242);
-		romFile.writeData(rewindMainHijack,sizeof(rewindLaterHijack),0x0022EA);
+		romFile.writeData(rewindLaterHijack,sizeof(rewindLaterHijack),0x0022EA);
 		romFile.writeData(rewindLevelNumHijack,sizeof(rewindLevelNumHijack),0x02D8BB);
 
 	}
 
+}
+
+int LvASMtool::deleteEdit1754LevelASM() {
+
+	// PC:0x0027EE(SNES:0x80A5EE)に挿入するコード
+	uchar rewindInitHijack[] = {
+			0xE2,0x30,0x20,0x9B,0x91
+	};
+
+	// PC:0x002442(SNES:0x80A242)に挿入するコード
+	uchar rewindMainHijack[] = {
+			0xAD,0xD4,0x13,0xF0,0x43
+	};
+
+	// PC:0x02DAB9(SNES:0x85D8B9)に挿入するコード
+	uchar rewindLevelNumHijack[] = {
+			0xA5,0x0E,0x0A
+	};
+
+	uchar rewind_FFh[] = {
+			0xFF
+	};
+	// なんとなく用意
+	int delCount = 0;
+	int addr = 0;
+
+	while(true) {
+		addr = romFile.findData((void*)"@LVLASM0",8,addr);
+		if(addr<0)	break;
+		int size = romFile.eraseRATSdata(addr-0x08);
+		if(size>0) {
+			if(delCount++==0) {
+				if(infoLevel > 0) printf("挿入済みのLevelASMを削除\n");
+			}
+			if(infoLevel > 0) printf("Addr:0x%06X Size:%dBytes\n",convPCtoSNES(addr)|0x800000,size);
+		}
+		addr++;
+	}
+	if(infoLevel==0 && delCount>0) printf("%d個のLevelASMを削除\n",delCount-1);
+
+	romFile.writeData(rewindInitHijack,sizeof(rewindInitHijack),0x0025EE);
+	romFile.writeData(rewindMainHijack,sizeof(rewindMainHijack),0x002242);
+	romFile.writeData(rewindLevelNumHijack,sizeof(rewindLevelNumHijack),0x02D8B9);
+	romFile.writeReptData(rewind_FFh,1,7,0x02DC46);
+	return delCount-1;
 }
 
 void LvASMtool::writeRomFile() {

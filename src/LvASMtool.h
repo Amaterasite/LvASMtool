@@ -25,6 +25,7 @@ public:
 		_now,		// rom側とツール側が同じバージョン
 		_old,		// rom側の方が古い
 		_new,		// rom側の方が新しい
+		_edit1754,	// edit1754氏のLevelASMが挿入済み
 	};
 	LvASMtool();
 	LvASMtool(string romName,string listName,int infoLevel);
@@ -51,6 +52,9 @@ public:
 
 	// 挿入したコードを戻す
 	void rewindHijackCode();
+
+	// edit1754氏のLevelASMを削除
+	int deleteEdit1754LevelASM();
 
 	ushort getRomLvASMver();
 
@@ -98,10 +102,10 @@ private:
 	const char* LEVELASM_HEADER =
 	//_______0123456789ABCDEF
 			"LevelASM tool   "	// 0x00
-			"Version:1.01    "	// 0x10
-			"Date:2015/08/20 "	// 0x20
-			"Author:88-CHAN /"	// 0x30
-			" 33953YoShI     "	// 0x40
+			"Version:1.02    "	// 0x10
+			"Date:2015/08/28 "	// 0x20
+			"Author:88-CHAN  "	// 0x30
+			"                "	// 0x40
 			"                "	// 0x50
 			"                ";	// 0x60
 

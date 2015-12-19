@@ -14,7 +14,7 @@ using namespace std;
 
 const char* WELCOME_MESSAGE =
 		"****************************************\n"
-		"* LevelASM tool version 1.01\n"
+		"* LevelASM tool version 1.02\n"
 		"* usage:LvASMtool SMW.smc list.txt\n"
 		"****************************************\n";
 
@@ -137,8 +137,8 @@ int main(int argc,char** argv) {
 				break;
 			case LvASMtool::ELvASMver::_new:		// rom側のバージョンの方が新しい
 				printf("警告:rom側のLevelASMのバージョンの方が新しいです。\n");
-				printf("rom ver:0x%04X tool ver:0x%04X\n",LvASM.getRomLvASMver(),LvASM.getToolLvASMver());
-				printf("正常にアンインストールできない可能\性がありますが、続行しますか？（y/n)\n");
+				printf("rom ver:0x%04X / tool ver:0x%04X\n",LvASM.getRomLvASMver(),LvASM.getToolLvASMver());
+				printf("正常にアンインストールできない可能\性がありますが、続行しますか？ （y/n)\n");
 				if(waitResponse()) {
 					LvASM.deleteLevelASM();
 					LvASM.deleteLevelASMcode();
@@ -151,7 +151,7 @@ int main(int argc,char** argv) {
 				break;
 			case LvASMtool::ELvASMver::_old:
 			case LvASMtool::ELvASMver::_now:
-				printf("LevelASMをアンインストールしますか？(y/n)\n");
+				printf("LevelASMをアンインストールしますか？ (y/n)\n");
 				if(waitResponse()) {
 					LvASM.deleteLevelASM();
 					LvASM.deleteLevelASMcode();
@@ -162,8 +162,19 @@ int main(int argc,char** argv) {
 					throw string("アンインストールを中止しました。\n");
 				}
 				break;
+			case LvASMtool::ELvASMver::_edit1754:
+				printf("edit1754's LevelASMToolが見つかりました。\n");
+				printf("アンインストールしますか？ (y/n)\n");
+				if(waitResponse()) {
+					LvASM.deleteEdit1754LevelASM();
+					LvASM.writeRomFile();
+				}
+				else {
+					throw string("アンインストールを中止しました。\n");
+				}
+				break;
 			}
-			printf("アンインストールを完了しました。\n");
+			printf("アンインストールが完了しました。\n");
 		}
 		else {
 			// LevelASM バージョン確認
@@ -172,7 +183,23 @@ int main(int argc,char** argv) {
 			case LvASMtool::ELvASMver::_nothing:	// 新規挿入
 				printf("LevelASMをインストールします。\n");
 				addr = LvASM.insertLevelASMcode();
-				printf("挿入成功 PCaddr:0x%06X\n",addr);
+				printf("インストール成功 PC Addr:0x%06X\n",addr);
+				break;
+
+			case LvASMtool::ELvASMver::_edit1754:	// edit1754氏のLevelASMTool
+				printf("edit1754's LevelASMToolが見つかりました。\n");
+				printf("アンイストールし、このLevelASMをインストールしますか？ (y/n)\n");
+				if(waitResponse()) {
+					printf("edit1754's LevelASMToolをアンインストールします。\n");
+					LvASM.deleteEdit1754LevelASM();
+					printf("LevelASMをインストールします。\n");
+					addr = LvASM.insertLevelASMcode();
+					printf("インストール成功 PC Addr:0x%06X\n",addr);
+				}
+				else {
+					throw string("挿入を中止しました。\n");
+				}
+
 				break;
 			case LvASMtool::ELvASMver::_old:		// バージョンアップ
 				printf("LevelASMをバージョンアップします。\n"
@@ -184,10 +211,11 @@ int main(int argc,char** argv) {
 
 				LvASM.insertLevelASMcode(addr);
 				break;
+
 			case LvASMtool::ELvASMver::_new:		// rom側のバージョンの方が新しい
 				printf("警告:rom側のLevelASMのバージョンの方が新しいです。\n");
-				printf("rom ver:0x%04X tool ver:0x%04X\n",LvASM.getRomLvASMver(),LvASM.getToolLvASMver());
-				printf("挿入を続行しますか？(y/n)\n");
+				printf("rom ver:0x%04X / tool ver:0x%04X\n",LvASM.getRomLvASMver(),LvASM.getToolLvASMver());
+				printf("挿入を続行しますか？ (y/n)\n");
 				if(!waitResponse()) throw string("挿入を中止しました。\n");
 
 				LvASM.rewindHijackCode();
@@ -195,6 +223,7 @@ int main(int argc,char** argv) {
 
 				LvASM.insertLevelASMcode(addr);
 				break;
+
 			case LvASMtool::ELvASMver::_now:		// 同じバージョン 一応書いとく～
 				break;
 			}
@@ -202,9 +231,10 @@ int main(int argc,char** argv) {
 
 			LvASM.insertLevelASM();
 			LvASM.writeRomFile();
+			printf("完了\n");
 		}
 	}
-	catch(string str) {
+	catch(string& str) {
 		cout << "Error: " << str << endl;
 		remove("xkas2.log");
 		system("pause");
@@ -214,7 +244,6 @@ int main(int argc,char** argv) {
 	remove("xkas2.log");
 	remove("tmpasm.asm");
 	remove("tmpasm.bin");
-	printf("完了\n");
 	system("pause");
 	return 0;
 }
