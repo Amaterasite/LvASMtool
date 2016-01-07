@@ -14,7 +14,7 @@ using namespace std;
 
 const char* WELCOME_MESSAGE =
 		"****************************************\n"
-		"* LevelASM tool version 1.02\n"
+		"* LevelASM tool version 1.10\n"
 		"* usage:LvASMtool SMW.smc list.txt\n"
 		"****************************************\n";
 
@@ -40,7 +40,6 @@ string getFullPath(string str) {
 	return str;
 }
 
-// TODO:もうLunarDLLに頼る必要なくね？PC<=>SNES変換メソッド用意して削っちゃえ
 int main(int argc,char** argv) {
 	char romPathBuf[256];
 	char listPathBuf[256];
@@ -152,15 +151,12 @@ int main(int argc,char** argv) {
 			case LvASMtool::ELvASMver::_old:
 			case LvASMtool::ELvASMver::_now:
 				printf("LevelASMをアンインストールしますか？ (y/n)\n");
-				if(waitResponse()) {
-					LvASM.deleteLevelASM();
-					LvASM.deleteLevelASMcode();
-					LvASM.rewindHijackCode();
-					LvASM.writeRomFile();
-				}
-				else {
-					throw string("アンインストールを中止しました。\n");
-				}
+				if(!waitResponse())	throw string("アンインストールを中止しました。\n");
+
+				LvASM.deleteLevelASM();
+				LvASM.deleteLevelASMcode();
+				LvASM.rewindHijackCode();
+				LvASM.writeRomFile();
 				break;
 			case LvASMtool::ELvASMver::_edit1754:
 				printf("edit1754's LevelASMToolが見つかりました。\n");
@@ -202,6 +198,12 @@ int main(int argc,char** argv) {
 
 				break;
 			case LvASMtool::ELvASMver::_old:		// バージョンアップ
+				if(LvASM.getRomLvASMver() < 0x0110) {
+					printf("Warning!: ver1.10は過去バージョンのコードと互換性がありません！\n");
+					printf("バージョンアップを続行しますか？(y/n)\n");
+					if(!waitResponse()) throw string("バージョンアップを中止しました。\n");
+				}
+
 				printf("LevelASMをバージョンアップします。\n"
 						"version:0x%04X -> 0x%04X\n",LvASM.getRomLvASMver(),LvASM.getToolLvASMver());
 

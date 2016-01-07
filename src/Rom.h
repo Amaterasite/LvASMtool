@@ -90,6 +90,7 @@ public:
 	// アクセッサ周り
 
 	bool isOpen();						// ファイルが開けたか確認
+	bool getHeader();					// ヘッダありか確認
 	void* getRomDataPtr();				// ファイルバッファのポインタを取得
 	int getRomSize();					// rom容量取得
 	void setFreeSpaceNum(uchar num);	// 空き領域とする値を変更
@@ -111,6 +112,9 @@ private:
 
 	// romの容量
 	int romSize = 0;
+
+	// romの上限容量 32MBくらいにする
+	const int ROM_MAX_SIZE = 0x02000000;
 
 	// 空き領域とする値 デフォルトではゼロ
 	// データ削除時はこの値で領域を埋める

@@ -21,6 +21,11 @@ void Rom::init (string romPath,Rom::ERomType romType,Rom::EHeader header) {
 	else {
 		romFile.seekg(0);
 	}
+	if(romSize >= ROM_MAX_SIZE) {
+		fileOpen = false;
+		romFile.close();
+		return;
+	}
 
 	// ファイルをバッファにコピー
 	romData = new uchar[romSize];
@@ -245,6 +250,10 @@ int Rom::writeRomFile() {
 
 bool Rom::isOpen() {
 	return fileOpen;
+}
+
+bool Rom::getHeader() {
+	return header == EHeader::HEADER;
 }
 
 void* Rom::getRomDataPtr() {

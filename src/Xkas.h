@@ -46,6 +46,9 @@ public:
 	// ‘}“ü‚ğ‹–‰Â‚·‚é—Ìˆæ‚ğİ’è
 	void setInsertRange(int startAddr,int endAddr);
 
+	// ƒ‰ƒxƒ‹ƒŠƒXƒg‚ğè“®‚Åæ“¾
+	int getLabelList(string fileName);
+
 	int getOffset(string labelName);
 
 	int getRTLaddr();

@@ -70,10 +70,9 @@ private:
 
 	// 挿入したアドレス 負数格納したいからSignedで定義～
 	struct addr {
-		short bank;
-		int init;
-		int early;
-		int later;
+		int base;
+		int RTLaddr;
+		int labelData[8];
 	};
 
 	string romName = "";
@@ -88,6 +87,7 @@ private:
 	ushort lvASMver = 0;
 
 	int infoLevel = 0;
+	int headerSize = 0;
 
 	// Header Loromのみ対応
 	int convPCtoSNES(int addr);
@@ -95,15 +95,15 @@ private:
 
 	// LeveASM 実行コードのバージョンコード
 	// ツール本体のバージョンとは別
-	const ushort LEVELASM_CODE_VERSION = 0x0101;
+	const ushort LEVELASM_CODE_VERSION = 0x0110;
 
 	// LevelASM 実行コードの先頭に挿入する情報
 	// "LevelASM tool"の有無で導入済みか判定
-	const char* LEVELASM_HEADER =
+	const char *LEVELASM_HEADER =
 	//_______0123456789ABCDEF
 			"LevelASM tool   "	// 0x00
-			"Version:1.02    "	// 0x10
-			"Date:2015/08/28 "	// 0x20
+			"Version:1.10    "	// 0x10
+			"Date:2015/12/25 "	// 0x20
 			"Author:88-CHAN  "	// 0x30
 			"                "	// 0x40
 			"                "	// 0x50
@@ -111,6 +111,42 @@ private:
 
 	// これ未満のアドレスにはデータを挿入しない
 	const int BASE_ADDR = 0x080000;
+
+	// ラベル名
+	const char LABEL_NAME[8][0x10] = {
+		"INIT_LEVEL",
+		"INIT_EARLY",
+		"INIT_LATER",
+		"MAIN_EARLY",
+		"MAIN_LATER",
+		"NMI_LEVEL",
+		"RESERVED_1",
+		"RESERVED_2",
+	};
+
+	// ラベルの別名 ラベル名が見つからなかった時に確認する
+	const char LABEL_ALIAS[8][0x10] = {
+			"INIT_LEVEL",
+			"INIT_EARLY",
+			"INIT",
+			"MAIN",
+			"MAIN_LATER",
+			"NMI",
+			"RESV1",
+			"RESV2",
+	};
+
+	// ラベルの表示名
+	const char OUTPUT_LABEL_NAME[8][0x10] = {
+			"INIT_LEVEL",
+			"INIT_EARLY",
+			"INIT_LATER",
+			"MAIN_EARLY",
+			"MAIN_LATER",
+			"NMI_LEVEL ",
+			"RESERVED_1",
+			"RESERVED_2",
+	};
 
 	void writeLongAddr(uchar* data,int offset,int addr);
 	void writeWordAddr(uchar* data,int offset,int addr);

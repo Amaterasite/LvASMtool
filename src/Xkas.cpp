@@ -94,6 +94,31 @@ int Xkas::allocSpace(Rom* romData,string asmPath,int sizeOffset,int limitSize) {
 	return allocAddr;
 }
 
+int Xkas::getLabelList(string fileName) {
+	std::ifstream tmplog(fileName.c_str());
+	if(!tmplog)	{
+		xkasErr = EerrType::tmplog_open_failed;
+		return -1;
+	}
+
+	labelData.clear();
+	std::string word;
+	int offset;
+	while(tmplog>>word) {
+		if(word == "error:") {
+			xkasErr = EerrType::assemble_error;
+			tmplog.close();
+			return -1;
+		}
+		tmplog.setf(std::ios::hex,std::ios::basefield);
+		tmplog>>offset;
+		labelData[word] = offset;
+	}
+	tmplog.close();
+
+	return 0;
+}
+
 int Xkas::insertASM() {
 	return insertASM(0);
 }
@@ -127,6 +152,7 @@ int Xkas::insertASM(int insertOffset) {
 		return -1;
 	}
 
+	labelData.clear();
 	std::string word;
 	int offset;
 	while(tmplog>>word) {
