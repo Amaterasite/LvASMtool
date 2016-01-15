@@ -122,6 +122,7 @@ int Rom::checkRATSdata(int addr) {
 			ushort size =		((romData[addr+5]<<8) + romData[addr+4]);
 			ushort invSize =	((romData[addr+7]<<8) + romData[addr+6]);
 			if((size ^ invSize) == 0xFFFF) {
+				//printf("RATS検出: Addr:%06X AllocSize:%04X\n",addr+0x0200,size+1);
 				return (int)size+1;
 			}
 		}
@@ -179,26 +180,38 @@ int Rom::findFreeSpace(int startAddr,int endAddr,int size,Rom::EBankBorder borde
 				buf = romData[addr++];
 				if(buf == freeSpaceNum) {
 					// 要求分の空き領域を発見できた場合おしまい。
-					if(++freeCount == size)	return (addr - size);
+					if(++freeCount == size)	{
+						//printf("FindFreeSpace! Addr:%06X Size:%04X\n",addr-size+0x0200,size);
+						return (addr - size);
+					}
+				} else {
+					// 空きじゃなかったんで最初から
+					//printf(" Continue Addr:%06X\n",addr+0x0200);
+					freeCount = 0;
+					addr--;
+					continue;
 				}
-				// 空きじゃなかったんで最初から
-				else freeCount = 0;
 			}
 			// 空き領域探索前にやること
-			else{
+			else {
 				// RATS保護範囲内はスルー
 				RATSsize = checkRATSdata(addr);
 				if(RATSsize > 0) {
 					addr = addr+RATSsize+8;
+					//printf(" Continue Addr:%06X\n",addr+0x0200);
 					continue;
 				}
 
-				// バンク跨ぎ不許可で、現在のBankに収まり切らない事が判明した場合次のBankに移る
+				// バンク跨ぎ不許可で、現在のBankに収まり切らない事が判明した場合次のBankに移るまでループ
 				if((border == NG) && ((addr&0x7FFF) + size > 0x8000)) {
-					//int addr2 = (addr&0xFFFF8000) + 0x8000;
-					//printf("Bank跨ぎ: %06X->%06X\n",addr,addr2);
-					//addr = addr2;
-					addr = (addr & 0xFFFF8000) + 0x8000;
+					int nextAddr = (addr & 0xFFFF8000) + 0x8000;
+					while(addr<nextAddr) {
+						RATSsize = checkRATSdata(addr);
+						if(RATSsize > 0) {
+							addr = addr+RATSsize+7;
+						}
+						addr++;
+					}
 					continue;
 				}
 				buf = romData[addr++];

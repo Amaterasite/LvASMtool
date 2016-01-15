@@ -95,15 +95,15 @@ private:
 
 	// LeveASM 実行コードのバージョンコード
 	// ツール本体のバージョンとは別
-	const ushort LEVELASM_CODE_VERSION = 0x0110;
+	const ushort LEVELASM_CODE_VERSION = 0x0112;
 
 	// LevelASM 実行コードの先頭に挿入する情報
 	// "LevelASM tool"の有無で導入済みか判定
 	const char *LEVELASM_HEADER =
 	//_______0123456789ABCDEF
 			"LevelASM tool   "	// 0x00
-			"Version:1.10    "	// 0x10
-			"Date:2015/12/25 "	// 0x20
+			"Version:1.12    "	// 0x10
+			"Date:2015/01/08 "	// 0x20
 			"Author:88-CHAN  "	// 0x30
 			"                "	// 0x40
 			"                "	// 0x50
