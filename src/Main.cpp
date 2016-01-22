@@ -14,7 +14,7 @@ using namespace std;
 
 const char* WELCOME_MESSAGE =
 		"****************************************\n"
-		"* LevelASM tool version 1.12\n"
+		"* LevelASM tool version 1.20\n"
 		"* usage:LvASMtool SMW.smc list.txt\n"
 		"****************************************\n";
 
@@ -150,9 +150,24 @@ int main(int argc,char** argv) {
 				break;
 			case LvASMtool::ELvASMver::_old:
 			case LvASMtool::ELvASMver::_now:
-				printf("LevelASMをアンインストールしますか？ (y/n)\n");
-				if(!waitResponse())	throw string("アンインストールを中止しました。\n");
+				// ver 1.20未満
+				if(LvASM.getRomLvASMver() < 0x0120) {
+					printf("LevelASMをアンインストールしますか？ (y/n)\n");
+					if(!waitResponse())	throw string("アンインストールを中止しました。\n");
 
+				} else {
+					if(LvASM.checkUsingUndefLabel()) {
+						printf("現在このRomでは以下の未定義ラベルを使用しています。\n");
+						LvASM.showUnsingUndefLabel();
+						printf(""
+								"未定義ラベルを実行する拡張をしたままアンインストールすると\n"
+								"ゲームがクラッシュする原因となります。\n"
+								"必ず拡張した箇所も元に戻してください。\n"
+								"");
+					}
+					printf("LevelASMをアンインストールしますか？ (y/n)\n");
+					if(!waitResponse())	throw string("アンインストールを中止しました。\n");
+				}
 				LvASM.deleteLevelASM();
 				LvASM.deleteLevelASMcode();
 				LvASM.rewindHijackCode();
